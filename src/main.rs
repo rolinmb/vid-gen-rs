@@ -1,4 +1,5 @@
 use std::fs;
+use std::path::Path;
 //use std::env;
 use image::{Rgba, RgbaImage};
 
@@ -6,6 +7,22 @@ fn cleandir(dir: &str) -> std::io::Result<()> {
   fs::remove_dir_all(dir)?;
   fs::create_dir_all(dir)?;
   Ok(())
+}
+
+fn gencleanup(pngdir: &str, pngname: &str, frames: u32) {
+  for i in 1..(frames+1) {
+    let idx = ((frames*2)-1)-(i-1);
+    let pathstr = format!("{}/{}_{}.png", pngdir, pngname, idx);
+    let pngpath = Path::new(&pathstr);
+    if pngpath.exists() {
+      match fs::remove_file(pngpath) {
+        Ok(_) => println!("gencleanup(): Successfully removed '{}'", pngpath.display()),
+        Err(err) => eprintln!("gencleanup(): Error removing '{}': {}", pngpath.display(), err),
+      }
+    } else {
+      println!("gencleanup(): '{}' does not exist; nothing to remove", pngpath.display());
+    }
+  }
 }
 
 fn customgen(
@@ -17,16 +34,16 @@ fn customgen(
 ) {
   if !fs::metadata(pngdir).is_ok() {
     if let Err(err) = fs::create_dir_all(pngdir) {
-      eprintln!("Error creating directory '{}': {}", pngdir, err);
+      eprintln!("customgen(): Error creating directory '{}': {}", pngdir, err);
     } else {
-      println!("Successfully created '{}'", pngdir);
+      println!("customgen(): Successfully created '{}'", pngdir);
     }
   } else {
-    println!("'{}' already exists; cleaning directory contents...", pngdir);
+    println!("customgen(): '{}' already exists; cleaning directory contents...", pngdir);
     if let Err(err) = cleandir(pngdir) {
       eprintln!("Error cleaning '{}': {}", pngdir, err);
     }
-    println!("Successfully cleaned '{}'", pngdir);
+    println!("customgen(): Successfully cleaned '{}'", pngdir);
   }
   let mut pngframe = RgbaImage::new(width, height);
   for i in 1..frames + 1 {
@@ -42,11 +59,13 @@ fn customgen(
     pngframe.save(format!("{}/{}_{}.png", pngdir, pngname, (((frames*2)-1)-(i-1)) )).unwrap();
   }
   //TODO: Run ffmpeg commands, reference vid-gen-go
-  println!("\nSuccessfully generated .png frames for .mp4 video\n\nTODO: Create {} with ffmpeg\n", vidname);
+  println!("\ncustomgen(): Successfully generated .png frames for .mp4\n\nTODO: Create {} with ffmpeg\n", vidname);
+  gencleanup(pngdir, pngname, frames);
+  println!("\ncustomgen(): Successfully cleaned up extra frames in '{}'", pngdir);
 }
 
 fn main() {
-  println!("Hello, world!");
+  println!("main(): Hello, world!");
   customgen(
     &String::from("src/png_out/test0"),
     &String::from("test0"),
