@@ -1,5 +1,6 @@
 use std::fs;
 use std::path::Path;
+use std::process::Command;
 //use std::env;
 use image::{Rgba, RgbaImage};
 
@@ -58,21 +59,30 @@ fn customgen(
     pngframe.save(format!("{}/{}_{}.png", pngdir, pngname, i - 1 )).unwrap();
     pngframe.save(format!("{}/{}_{}.png", pngdir, pngname, (((frames*2)-1)-(i-1)) )).unwrap();
   }
-  //TODO: Run ffmpeg commands, reference vid-gen-go
-  println!("\ncustomgen(): Successfully generated .png frames for .mp4\n\nTODO: Create {} with ffmpeg\n", vidname);
+  println!("\ncustomgen(): Successfully generated .png frames for .mp4");
+  let _cmdffmpeg = if cfg!(target_os = "windows") {
+    Command::new("cmd")
+      .args(["/C", &format!("ffmpeg -y -framerate {} -i {}/{}_%d.png -c:v libx264 -pix_fmt yuv420p {}.mp4", frames, pngdir, pngname, vidname)])
+      .output()
+      .expect("\ncustomgen(): Failed to execute ffmpeg command")
+  } else {
+    Command::new("sh")
+      .arg("-c")
+      .arg("echo hello")
+      .output()
+      .expect("\ncutsomgen(): Failed to execute ffmpeg command")
+  };
+  println!("\ncustomgen(): Successfully executed ffmpeg command to generate {}", vidname);
   gencleanup(pngdir, pngname, frames);
   println!("\ncustomgen(): Successfully cleaned up extra frames in '{}'", pngdir);
 }
 
 fn main() {
-  println!("main(): Hello, world!");
   customgen(
     &String::from("src/png_out/test0"),
     &String::from("test0"),
-    &String::from("test0"),
-    1000,
-    1000,
-    30,
+    &String::from("src/vid_out/test0"),
+    1000, 1000, 30,
     |x, y| (x + y) as u32,
     |x, y| (x.wrapping_sub(y)) as u32,
     |x, y| (x * y) as u32,
