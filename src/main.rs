@@ -1,9 +1,64 @@
 use std::fs;
 use std::path::Path;
 use std::process::Command;
+use std::collections::HashMap;
 //use std::env;
 use image::{Rgba, RgbaImage};
 
+#[derive(Debug, Clone)]
+enum AstNode {
+  BasicLit(BasicLit),
+  Ident(String),
+  CallExpr(CallExpr),
+  BinaryExpr(BinaryExpr),
+  ParenExpr(Box<AstNode>),
+  UnaryExpr(UnaryExpr),
+}
+
+#[derive(Debug, Clone)]
+struct BasicLit {
+  kind: TokenType,
+  value: String,
+}
+
+#[derive(Debug, Clone)]
+struct CallExpr {
+  fun: Box<AstNode>,
+  args: Vec<AstNode>,
+}
+
+#[derive(Debug, Clone)]
+struct BinaryExpr {
+  op: Token,
+  x: Box<AstNode>,
+  y: Box<AstNode>,
+}
+
+#[derive(Debug, Clone)]
+struct UnaryExpr {
+  op: Token,
+  x: Box<AstNode>,
+}
+
+#[derive(Debug, Clone)]
+enum Token {
+  Add,
+  Sub,
+  Mul,
+  Quo,
+}
+
+#[derive(Debug, Clone)]
+enum TokenType {
+  Int,
+  Float,
+}
+//TODO: implement
+/*
+fn evaluate_ast_node(node: &AstNode, vars: &HashMap<String, f64>) -> Result<f64, String> {
+
+}
+*/
 fn cleandir(dir: &str) -> std::io::Result<()> {
   fs::remove_dir_all(dir)?;
   fs::create_dir_all(dir)?;
@@ -82,7 +137,7 @@ fn main() {
     &String::from("src/png_out/test0"),
     &String::from("test0"),
     &String::from("src/vid_out/test0"),
-    1000, 1000, 30,
+    1000, 1000, 10,
     |x, y| (x + y) as u32,
     |x, y| (x.wrapping_sub(y)) as u32,
     |x, y| (x * y) as u32,
