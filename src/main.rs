@@ -118,5 +118,5 @@ fn main() {
     |x, y| (x.wrapping_sub(y)) as u32,
     |x, y| (x * y) as u32,
   );
-  //println!("{}", fneval(&String::from("(((pow(y,2+x))/(1+x))*sin(y))"), 2, 10));
+  //println!("{}", fneval(&String::from("(((pow(y , 2 + x)) / (1 + x))*sin( y ))"), 2, 10));
 }
