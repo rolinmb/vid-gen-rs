@@ -14,7 +14,7 @@ fn fneval(stringexpr: &str, x: u32, y: u32) -> f64 {
   println!("{}", cmdexprstr);
   let cmdeval = if cfg!(target_os = "windows") {
     Command::new("cmd")
-      .args(["/C", "./src/main", &cmdexprstr, &x.to_string(), &y.to_string()])
+      .args(["/C", "src\\main.exe", &cmdexprstr, &x.to_string(), &y.to_string()])
       .output()
       .expect("\nfneval(): Failed to execute eval command")
   } else {
