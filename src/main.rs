@@ -109,7 +109,7 @@ fn customgen(
 }
 
 fn main() {
-  /*customgen(
+  customgen(
     &String::from("src/png_out/test0"),
     &String::from("test0"),
     &String::from("src/vid_out/test0"),
@@ -117,5 +117,6 @@ fn main() {
     |x, y| (x + y) as u32,
     |x, y| (x.wrapping_sub(y)) as u32,
     |x, y| (x * y) as u32,
-  );*/println!("{}", fneval(&String::from("pow(x, y)"), 2, 10));
+  );
+  //println!("{}", fneval(&String::from("(((pow(y,2+x))/(1+x))*sin(y))"), 2, 10));
 }
