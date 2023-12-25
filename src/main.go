@@ -2,16 +2,16 @@ package main
 
 import (
   "os"
-  //"os/exec"
+  "os/exec"
   "fmt"
   "log"
   "strconv"
   "strings"
-  //"io/ioutil"
+  "io/ioutil"
   "go/parser"
-)
+)/*
 
-/*const (
+const (
     RNAME = "src/red.go"
     GNAME = "src/green.go"
     BNAME = "src/blue.go"
@@ -33,9 +33,9 @@ func replaceBrackets(exprStr string) string {
     return strings.Replace(result, "]", ")", -1)
 }
 
-func buildGoText(fnStr,fName string) string {
+func buildGoText(rgbPkg,fName,fnStr string) string {
     return fmt.Sprintf(
-    `package main
+    `package %s
     import (
         "os"
         "fmt"
@@ -68,7 +68,7 @@ func buildGoText(fnStr,fName string) string {
         fmt.Printf(result)
         os.Exit(0)
     }
-    `, fName, fnStr, fName, fnStr, fName, fName)
+    `, rgbPkg, fName, fnStr, fName, fnStr, fName, fName)
 }
 
 func main() {
@@ -81,9 +81,9 @@ func main() {
     trimmed1 = replaceBrackets(trimmed1)
     trimmed2 = replaceBrackets(trimmed2)
     trimmed3 = replaceBrackets(trimmed3)
-    goText1 := buildGoText(trimmed1, RNAME)
-    goText2 := buildGoText(trimmed2, GNAME)
-    goText3 := buildGoText(trimmed3, BNAME)
+    goText1 := buildGoText("red", RNAME, trimmed1)
+    goText2 := buildGoText("green", GNAME, trimmed2)
+    goText3 := buildGoText("blue", BNAME, trimmed3)
     err := ioutil.WriteFile(RNAME, []byte(goText1), 0644)
     if err != nil {
 		log.Fatalf("main.go(): Error writing '%s': %v", RNAME, err)
@@ -112,9 +112,9 @@ func main() {
         log.Fatalf("main.go(): Error building 'src/blue.go' into an executable: %v", err)
     }
     os.Exit(0)
-}*/
+}
 
-func main() {
+*/func main() {
     if len(os.Args) != 4 { 
         log.Fatalf("Expected 4 total arguments (program name, expression string, x, y), but received %d arguments", len(os.Args))
     }

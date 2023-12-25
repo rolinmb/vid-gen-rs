@@ -1,10 +1,9 @@
 use std::fs;
 use std::path::Path;
 use std::process::Command;
-//use std::env;
 use image::{Rgba, RgbaImage};
 
-fn fneval(stringexpr: &str, x: u32, y: u32) -> f64 {
+/*fn fneval(stringexpr: &str, x: u32, y: u32) -> f64 {
   //println!("{}", stringexpr);
   let mut cmdexprstr = stringexpr.replace(char::is_whitespace, "");
   cmdexprstr = cmdexprstr.replace("(", "[");
@@ -33,7 +32,7 @@ fn fneval(stringexpr: &str, x: u32, y: u32) -> f64 {
       0.0
     }
   }
-}
+}*/
 
 fn cleandir(dir: &str) -> std::io::Result<()> {
   fs::remove_dir_all(dir)?;
@@ -106,7 +105,7 @@ fn genclosures(
   println!("\ngenclosures(): Successfully executed ffmpeg command to generate {}", vidname);
   gencleanup(pngdir, pngname, frames);
   println!("\ngenclosures(): Successfully cleaned up extra frames in '{}'", pngdir);
-}
+}/*
 
 fn genstrings(
   pngdir: &str, pngname: &str, vidname: &str,
@@ -157,7 +156,7 @@ fn genstrings(
   println!("\ngenstrings(): Successfully cleaned up extra frames in '{}'", pngdir);
 }
 
-fn main() {
+*/fn main() {
   genclosures(
     &String::from("src/png_out/test0"),
     &String::from("test0"),
