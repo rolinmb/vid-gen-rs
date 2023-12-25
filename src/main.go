@@ -2,12 +2,12 @@ package main
 
 import (
   "os"
-  "os/exec"
+  //"os/exec"
   "fmt"
   "log"
   "strconv"
   "strings"
-  "io/ioutil"
+  //"io/ioutil"
   "go/parser"
 )
 
