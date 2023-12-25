@@ -10,4 +10,7 @@ main.go:
     (from src) go build -o main.exe && ./main.exe [[[pow[y,2+x]]/[1+x]]*sin[y]] 2 10 
     (output) -1813.40370
 
+parser.go:
+    - evaluateASTNode uses go standard libraries to take the result of parsing a string with go/parser (interface{} type object) and two variables x,y ; then outputs the result
+
 TODO: finish implementing custom string defined function parsing in rust by using output of calling main.exe (result of building main.go and executing src.main.exe with fneval())

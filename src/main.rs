@@ -5,27 +5,27 @@ use std::process::Command;
 use image::{Rgba, RgbaImage};
 
 fn fneval(stringexpr: &str, x: u32, y: u32) -> f64 {
-  println!("{}", stringexpr);
+  //println!("{}", stringexpr);
   let mut cmdexprstr = stringexpr.replace(char::is_whitespace, "");
   cmdexprstr = cmdexprstr.replace("(", "[");
   cmdexprstr = cmdexprstr.replace(")", "]");
-  cmdexprstr = "[".to_owned() + &cmdexprstr;
-  cmdexprstr = cmdexprstr + "]";
-  println!("{}", cmdexprstr);
+  cmdexprstr = "[".to_owned()+&cmdexprstr;
+  cmdexprstr = cmdexprstr+"]";
+  //println!("{}", cmdexprstr);
   let cmdeval = if cfg!(target_os = "windows") {
     Command::new("cmd")
       .args(["/C", "src\\main.exe", &cmdexprstr, &x.to_string(), &y.to_string()])
       .output()
-      .expect("\nfneval(): Failed to execute eval command")
+      .expect("fneval(): Failed to execute eval command")
   } else {
     Command::new("sh")
       .arg("-c")
       .arg("echo hello from fneval() in main.rs")
       .output()
-      .expect("\nfneval(): Failed to execute eval command")
+      .expect("fneval(): Failed to execute eval command")
   };
   let evaloutput = String::from_utf8_lossy(&cmdeval.stdout);
-  println!("{}", evaloutput);
+  //println!("{}", evaloutput);
   match evaloutput.trim().parse::<f64>() {
     Ok(parsednum) => parsednum,
     Err(err) => {
@@ -52,12 +52,12 @@ fn gencleanup(pngdir: &str, pngname: &str, frames: u32) {
         Err(err) => eprintln!("gencleanup(): Error removing '{}': {}", pngpath.display(), err),
       }
     } else {
-      println!("gencleanup(): '{}' does not exist; nothing to remove", pngpath.display());
+      println!("\ngencleanup(): '{}' does not exist; nothing to remove", pngpath.display());
     }
   }
 }
 
-fn customgen(
+fn genclosures(
   pngdir: &str, pngname: &str, vidname: &str,
   width: u32, height: u32, frames: u32,
   f_r: impl Fn(u32, u32) -> u32,
@@ -66,19 +66,19 @@ fn customgen(
 ) {
   if !fs::metadata(pngdir).is_ok() {
     if let Err(err) = fs::create_dir_all(pngdir) {
-      eprintln!("customgen(): Error creating directory '{}': {}", pngdir, err);
+      eprintln!("genclosures(): Error creating directory '{}': {}", pngdir, err);
     } else {
-      println!("customgen(): Successfully created '{}'", pngdir);
+      println!("\ngenclosures(): Successfully created '{}'", pngdir);
     }
   } else {
-    println!("customgen(): '{}' already exists; cleaning directory contents...", pngdir);
+    println!("genclosures(): '{}' already exists; cleaning directory contents...", pngdir);
     if let Err(err) = cleandir(pngdir) {
-      eprintln!("Error cleaning '{}': {}", pngdir, err);
+      eprintln!("genclojures(): Error cleaning '{}': {}", pngdir, err);
     }
-    println!("customgen(): Successfully cleaned '{}'", pngdir);
+    println!("\ngenclosures(): Successfully cleaned '{}'", pngdir);
   }
   let mut pngframe = RgbaImage::new(width, height);
-  for i in 1..frames + 1 {
+  for i in 1..frames+1 {
     for x in 0..width {
       for y in 0..height {
         pngframe.put_pixel(
@@ -90,33 +90,91 @@ fn customgen(
     pngframe.save(format!("{}/{}_{}.png", pngdir, pngname, i - 1 )).unwrap();
     pngframe.save(format!("{}/{}_{}.png", pngdir, pngname, (((frames*2)-1)-(i-1)) )).unwrap();
   }
-  println!("\ncustomgen(): Successfully generated .png frames for .mp4");
+  println!("\ngenclosures(): Successfully generated .png frames for .mp4");
   let _cmdffmpeg = if cfg!(target_os = "windows") {
     Command::new("cmd")
       .args(["/C", &format!("ffmpeg -y -framerate {} -i {}/{}_%d.png -c:v libx264 -pix_fmt yuv420p {}.mp4", frames, pngdir, pngname, vidname)])
       .output()
-      .expect("\ncustomgen(): Failed to execute ffmpeg command")
+      .expect("genclosures(): Failed to execute ffmpeg command")
   } else {
     Command::new("sh")
       .arg("-c")
       .arg("echo hello")
       .output()
-      .expect("\ncutsomgen(): Failed to execute ffmpeg command")
+      .expect("cutsomgen(): Failed to execute ffmpeg command")
   };
-  println!("\ncustomgen(): Successfully executed ffmpeg command to generate {}", vidname);
+  println!("\ngenclosures(): Successfully executed ffmpeg command to generate {}", vidname);
   gencleanup(pngdir, pngname, frames);
-  println!("\ncustomgen(): Successfully cleaned up extra frames in '{}'", pngdir);
+  println!("\ngenclosures(): Successfully cleaned up extra frames in '{}'", pngdir);
+}
+
+fn genstrings(
+  pngdir: &str, pngname: &str, vidname: &str,
+  width: u32, height: u32, frames: u32,
+  str_r: &str, str_g: &str, str_b: &str,
+) {
+  if !fs::metadata(pngdir).is_ok() {
+    if let Err(err) = fs::create_dir_all(pngdir) {
+      eprintln!("genstrings(): Error creating directory '{}': {}", pngdir, err);
+    } else {
+      println!("\ngenstrings(): Successfully created '{}'", pngdir);
+    }
+  } else {
+    println!("genstrings(): '{}' already exists; cleaning directory contents...", pngdir);
+    if let Err(err) = cleandir(pngdir) {
+      eprintln!("genstrings(): Error cleaning '{}': {}", pngdir, err);
+    }
+    println!("\ngenstrings(): Successfully cleaned '{}'", pngdir);
+  }
+  let mut pngframe = RgbaImage::new(width, height);
+  for i in 1..frames+1 {
+    for x in 0..width {
+      for y in 0..height {
+        pngframe.put_pixel(
+          x, y,
+          Rgba([fneval(str_r,x,y) as u8, fneval(str_g,x,y) as u8, fneval(str_b,x,y) as u8, 255]),
+        );
+      }
+    }
+    pngframe.save(format!("{}/{}_{}.png", pngdir, pngname, i - 1 )).unwrap();
+    pngframe.save(format!("{}/{}_{}.png", pngdir, pngname, (((frames*2)-1)-(i-1)) )).unwrap();
+  }
+  println!("\ngenstrings(): Successfully generated .png frames for .mp4");
+  let _cmdffmpeg = if cfg!(target_os = "windows") {
+    Command::new("cmd")
+      .args(["/C", &format!("ffmpeg -y -framerate {} -i {}/{}_%d.png -c:v libx264 -pix_fmt yuv420p {}.mp4", frames, pngdir, pngname, vidname)])
+      .output()
+      .expect("genstrings(): Failed to execute ffmpeg command")
+  } else {
+    Command::new("sh")
+      .arg("-c")
+      .arg("echo hello")
+      .output()
+      .expect("genstrings(): Failed to execute ffmpeg command")
+  };
+  println!("\ngenstrings(): Successfully executed ffmpeg command to generate {}", vidname);
+  gencleanup(pngdir, pngname, frames);
+  println!("\ngenstrings(): Successfully cleaned up extra frames in '{}'", pngdir);
 }
 
 fn main() {
-  customgen(
+  genclosures(
     &String::from("src/png_out/test0"),
     &String::from("test0"),
     &String::from("src/vid_out/test0"),
     1000, 1000, 10,
-    |x, y| (x + y) as u32,
     |x, y| (x.wrapping_sub(y)) as u32,
-    |x, y| (x * y) as u32,
+    |x, y| (x*y) as u32,
+    |x, y| (x*x+y*y) as u32,
   );
-  //println!("{}", fneval(&String::from("(((pow(y , 2 + x)) / (1 + x))*sin( y ))"), 2, 10));
+  println!("{}", fneval(&String::from("(((pow(y , 2 + x)) / (1 + x))*sin( y ))"), 2, 10));
+  /*genstrings(
+    &String::from("src/png_out/test1"),
+    &String::from("test1"),
+    &String::from("src/vid_out/test1"),
+    1000, 1000, 10,
+    &String::from("sin(x)+cos(y)+tan(x+y)"),
+    &String::from("x*y"),
+    &String::from("x*x+y*y"),
+  );*/
 }
