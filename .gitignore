@@ -2,4 +2,11 @@ src/png_out
 src/png_in
 src/vid_out
 src/main.exe
+src/parse.exe
+src/red.go
+src/green.go
+src/blue.go
+src/red.exe
+src/green.exe
+src/blue.exe
 /target

@@ -167,7 +167,7 @@ fn main() {
     |x, y| (x*y) as u32,
     |x, y| (x*x+y*y) as u32,
   );
-  println!("{}", fneval(&String::from("(((pow(y , 2 + x)) / (1 + x))*sin( y ))"), 2, 10));
+  //println!("{}", fneval(&String::from("(((pow(y , 2 + x)) / (1 + x))*sin( y ))"), 2, 10));
   /*genstrings(
     &String::from("src/png_out/test1"),
     &String::from("test1"),
