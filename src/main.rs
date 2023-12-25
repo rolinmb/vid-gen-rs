@@ -58,10 +58,10 @@ fn gencleanup(pngdir: &str, pngname: &str, frames: u32) {
 fn genclosures(
   pngdir: &str, pngname: &str, vidname: &str,
   width: u32, height: u32, frames: u32,
-  mut scale: u32, scalefactor: u32,
-  f_r: impl Fn(u32, u32) -> u32,
-  f_g: impl Fn(u32, u32) -> u32,
-  f_b: impl Fn(u32, u32) -> u32,
+  mut scale: f64, scalefactor: f64,
+  f_r: impl Fn(f32, f32) -> f64,
+  f_g: impl Fn(f32, f32) -> f64,
+  f_b: impl Fn(f32, f32) -> f64,
 ) {
   if !fs::metadata(pngdir).is_ok() {
     if let Err(err) = fs::create_dir_all(pngdir) {
@@ -80,20 +80,22 @@ fn genclosures(
   for i in 1..frames+1 {
     for x in 0..width {
       for y in 0..height {
+        let xfloat = x as f32;
+        let yfloat = y as f32;
         pngframe.put_pixel(
           x, y,
           Rgba(
             [
-              (scale.wrapping_mul(f_r(x,y))) as u8,
-              (scale.wrapping_mul(f_g(x,y))) as u8,
-              (scale.wrapping_mul(f_b(x,y))) as u8,
+              ((scale * f_r(xfloat,yfloat)) % 256.0) as u8,
+              ((scale * f_g(xfloat,yfloat)) % 256.0) as u8,
+              ((scale * f_b(xfloat,yfloat)) % 256.0) as u8,
               255,
             ],
           ),
         );
       }
     }
-    pngframe.save(format!("{}/{}_{}.png", pngdir, pngname, i - 1 )).unwrap();
+    pngframe.save(format!("{}/{}_{}.png", pngdir, pngname, i-1 )).unwrap();
     pngframe.save(format!("{}/{}_{}.png", pngdir, pngname, (((frames*2)-1)-(i-1)) )).unwrap();
     scale *= scalefactor
   }
@@ -108,7 +110,7 @@ fn genclosures(
       .arg("-c")
       .arg("echo hello")
       .output()
-      .expect("cutsomgen(): Failed to execute ffmpeg command")
+      .expect("genclosures(): Failed to execute ffmpeg command")
   };
   println!("\ngenclosures(): Successfully executed ffmpeg command to generate {}", vidname);
   gencleanup(pngdir, pngname, frames);
@@ -169,10 +171,10 @@ fn genstrings(
     &String::from("src/png_out/test0"),
     &String::from("test0"),
     &String::from("src/vid_out/test0"),
-    1000, 1000, 10, 1, 2,
-    |x, y| (x.wrapping_sub(y)) as u32,
-    |x, y| (x*y) as u32,
-    |x, y| (x*x+y*y) as u32,
+    1000, 1000, 10, 1.0, 1.1,
+    |x, y| (x-y) as f64,
+    |x, y| (x*y) as f64,
+    |x, y| (x*x+y*y) as f64,
   );
   //println!("{}", fneval(&String::from("(((pow(y , 2 + x)) / (1 + x))*sin( y ))"), 2, 10));
   /*genstrings(
