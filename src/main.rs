@@ -2,7 +2,6 @@ use std::fs;
 use std::path::Path;
 use std::process::Command;
 use image::{Rgba, RgbaImage};
-
 /*fn fneval(stringexpr: &str, x: u32, y: u32) -> f64 {
   //println!("{}", stringexpr);
   let mut cmdexprstr = stringexpr.replace(char::is_whitespace, "");
@@ -59,6 +58,7 @@ fn gencleanup(pngdir: &str, pngname: &str, frames: u32) {
 fn genclosures(
   pngdir: &str, pngname: &str, vidname: &str,
   width: u32, height: u32, frames: u32,
+  mut scale: u32, scalefactor: u32,
   f_r: impl Fn(u32, u32) -> u32,
   f_g: impl Fn(u32, u32) -> u32,
   f_b: impl Fn(u32, u32) -> u32,
@@ -82,12 +82,20 @@ fn genclosures(
       for y in 0..height {
         pngframe.put_pixel(
           x, y,
-          Rgba([f_r(x,y) as u8, f_g(x,y) as u8, f_b(x,y) as u8, 255]),
+          Rgba(
+            [
+              (scale.wrapping_mul(f_r(x,y))) as u8,
+              (scale.wrapping_mul(f_g(x,y))) as u8,
+              (scale.wrapping_mul(f_b(x,y))) as u8,
+              255,
+            ],
+          ),
         );
       }
     }
     pngframe.save(format!("{}/{}_{}.png", pngdir, pngname, i - 1 )).unwrap();
     pngframe.save(format!("{}/{}_{}.png", pngdir, pngname, (((frames*2)-1)-(i-1)) )).unwrap();
+    scale *= scalefactor
   }
   println!("\ngenclosures(): Successfully generated .png frames for .mp4");
   let _cmdffmpeg = if cfg!(target_os = "windows") {
@@ -161,7 +169,7 @@ fn genstrings(
     &String::from("src/png_out/test0"),
     &String::from("test0"),
     &String::from("src/vid_out/test0"),
-    1000, 1000, 10,
+    1000, 1000, 10, 1, 2,
     |x, y| (x.wrapping_sub(y)) as u32,
     |x, y| (x*y) as u32,
     |x, y| (x*x+y*y) as u32,
