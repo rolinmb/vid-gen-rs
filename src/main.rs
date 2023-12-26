@@ -63,7 +63,9 @@ fn genclosures(
   f_r: impl Fn(f32, f32) -> f64,
   f_g: impl Fn(f32, f32) -> f64,
   f_b: impl Fn(f32, f32) -> f64,
-  f_theta: impl Fn(f32, f32) -> f64,
+  fr_theta: impl Fn(f32, f32) -> f64,
+  fg_theta: impl Fn(f32, f32) -> f64,
+  fb_theta: impl Fn(f32, f32) -> f64
 ) {
   if !fs::metadata(pngdir).is_ok() {
     if let Err(err) = fs::create_dir_all(pngdir) {
@@ -88,9 +90,9 @@ fn genclosures(
           x, y,
           Rgba(
             [
-              ((f_theta(xfloat,yfloat) * scale * f_r(xfloat,yfloat)) % 256.0) as u8,
-              ((f_theta(xfloat,yfloat) * scale * f_g(xfloat,yfloat)) % 256.0) as u8,
-              ((f_theta(xfloat,yfloat) * scale * f_b(xfloat,yfloat)) % 256.0) as u8,
+              ((fr_theta(xfloat,yfloat) * scale * f_r(xfloat,yfloat)) % 256.0) as u8,
+              ((fg_theta(xfloat,yfloat) * scale * f_g(xfloat,yfloat)) % 256.0) as u8,
+              ((fb_theta(xfloat,yfloat) * scale * f_b(xfloat,yfloat)) % 256.0) as u8,
               255,
             ],
           ),
@@ -104,7 +106,7 @@ fn genclosures(
   println!("\ngenclosures(): Successfully generated .png frames for .mp4");
   let _cmdffmpeg = if cfg!(target_os = "windows") {
     Command::new("cmd")
-      .args(["/C", &format!("ffmpeg -y -framerate {} -i {}/{}_%d.png -c:v libx264 -pix_fmt yuv420p {}.mp4", frames, pngdir, pngname, vidname)])
+      .args(["/C", &format!("ffmpeg -y -framerate 30 -i {}/{}_%d.png -c:v libx264 -pix_fmt yuv420p {}.mp4", pngdir, pngname, vidname)])
       .output()
       .expect("genclosures(): Failed to execute ffmpeg command")
   } else {
@@ -153,7 +155,7 @@ fn genstrings(
   println!("\ngenstrings(): Successfully generated .png frames for .mp4");
   let _cmdffmpeg = if cfg!(target_os = "windows") {
     Command::new("cmd")
-      .args(["/C", &format!("ffmpeg -y -framerate {} -i {}/{}_%d.png -c:v libx264 -pix_fmt yuv420p {}.mp4", frames, pngdir, pngname, vidname)])
+      .args(["/C", &format!("ffmpeg -y -framerate 30 -i {}/{}_%d.png -c:v libx264 -pix_fmt yuv420p {}.mp4", pngdir, pngname, vidname)])
       .output()
       .expect("genstrings(): Failed to execute ffmpeg command")
   } else {
@@ -174,12 +176,14 @@ fn genstrings(
     &String::from("test0"), // pngname
     &String::from("src/vid_out/test0"), // vidnmame
     1000, 1000, // width, height
-    10, // frames
+    30, // frames
     1.0, 1.1, // scale, scalefactor
     |x, y| (x-y) as f64, // f_r()
     |x, y| (x*y) as f64, // f_g()
     |x, y| (x*x+y*y) as f64, // f_b()
-    |x, y| ((x+y).sin()) as f64, // f_theta()
+    |x, y| ((x+y).sin()) as f64, // fr_theta()
+    |x, y| ((x-y).cos()) as f64, // fb_theta()
+    |x, y| ((x*y).tan()) as f64, // fg_theta()
   );
   //println!("{}", fneval(&String::from("(((pow(y , 2 + x)) / (1 + x))*sin( y ))"), 2, 10));
   /*genstrings(
