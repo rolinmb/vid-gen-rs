@@ -1,8 +1,9 @@
 use std::fs;
 use std::path::Path;
 use std::process::Command;
-use image::{Rgba, RgbaImage};
-/*fn fneval(stringexpr: &str, x: u32, y: u32) -> f64 {
+use image::{Rgba, RgbaImage};/*
+
+fn fneval(stringexpr: &str, x: u32, y: u32) -> f64 {
   //println!("{}", stringexpr);
   let mut cmdexprstr = stringexpr.replace(char::is_whitespace, "");
   cmdexprstr = cmdexprstr.replace("(", "[");
@@ -31,9 +32,9 @@ use image::{Rgba, RgbaImage};
       0.0
     }
   }
-}*/
+}
 
-fn cleandir(dir: &str) -> std::io::Result<()> {
+*/fn cleandir(dir: &str) -> std::io::Result<()> {
   fs::remove_dir_all(dir)?;
   fs::create_dir_all(dir)?;
   Ok(())
@@ -62,6 +63,7 @@ fn genclosures(
   f_r: impl Fn(f32, f32) -> f64,
   f_g: impl Fn(f32, f32) -> f64,
   f_b: impl Fn(f32, f32) -> f64,
+  f_theta: impl Fn(f32, f32) -> f64,
 ) {
   if !fs::metadata(pngdir).is_ok() {
     if let Err(err) = fs::create_dir_all(pngdir) {
@@ -86,9 +88,9 @@ fn genclosures(
           x, y,
           Rgba(
             [
-              ((scale * f_r(xfloat,yfloat)) % 256.0) as u8,
-              ((scale * f_g(xfloat,yfloat)) % 256.0) as u8,
-              ((scale * f_b(xfloat,yfloat)) % 256.0) as u8,
+              ((f_theta(xfloat,yfloat) * scale * f_r(xfloat,yfloat)) % 256.0) as u8,
+              ((f_theta(xfloat,yfloat) * scale * f_g(xfloat,yfloat)) % 256.0) as u8,
+              ((f_theta(xfloat,yfloat) * scale * f_b(xfloat,yfloat)) % 256.0) as u8,
               255,
             ],
           ),
@@ -168,22 +170,26 @@ fn genstrings(
 
 */fn main() {
   genclosures(
-    &String::from("src/png_out/test0"),
-    &String::from("test0"),
-    &String::from("src/vid_out/test0"),
-    1000, 1000, 10, 1.0, 1.1,
-    |x, y| (x-y) as f64,
-    |x, y| (x*y) as f64,
-    |x, y| (x*x+y*y) as f64,
+    &String::from("src/png_out/test0"), // pngdir
+    &String::from("test0"), // pngname
+    &String::from("src/vid_out/test0"), // vidnmame
+    1000, 1000, // width, height
+    10, // frames
+    1.0, 1.1, // scale, scalefactor
+    |x, y| (x-y) as f64, // f_r()
+    |x, y| (x*y) as f64, // f_g()
+    |x, y| (x*x+y*y) as f64, // f_b()
+    |x, y| ((x+y).sin()) as f64, // f_theta()
   );
   //println!("{}", fneval(&String::from("(((pow(y , 2 + x)) / (1 + x))*sin( y ))"), 2, 10));
   /*genstrings(
-    &String::from("src/png_out/test1"),
-    &String::from("test1"),
-    &String::from("src/vid_out/test1"),
-    1000, 1000, 10,
-    &String::from("sin(x)+cos(y)+tan(x+y)"),
-    &String::from("x*y"),
-    &String::from("x*x+y*y"),
+    &String::from("src/png_out/test1"), // pngdir
+    &String::from("test1"), // pngname
+    &String::from("src/vid_out/test1"), // vidname
+    1000, 1000, // width, height
+    10, // frames
+    &String::from("sin(x)+cos(y)+tan(x+y)"), // str_r
+    &String::from("x*y"), // str_g
+    &String::from("x*x+y*y"), // str_b
   );*/
 }
