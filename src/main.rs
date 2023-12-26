@@ -60,12 +60,12 @@ fn genclosures(
   pngdir: &str, pngname: &str, vidname: &str,
   width: u32, height: u32, frames: u32,
   mut scale: f64, scalefactor: f64,
-  f_r: impl Fn(f32, f32) -> f64,
-  f_g: impl Fn(f32, f32) -> f64,
-  f_b: impl Fn(f32, f32) -> f64,
-  fr_theta: impl Fn(f32, f32) -> f64,
-  fg_theta: impl Fn(f32, f32) -> f64,
-  fb_theta: impl Fn(f32, f32) -> f64
+  f_r: impl Fn(f64, f64) -> f64,
+  f_g: impl Fn(f64, f64) -> f64,
+  f_b: impl Fn(f64, f64) -> f64,
+  fr_theta: impl Fn(f64, f64) -> f64,
+  fg_theta: impl Fn(f64, f64) -> f64,
+  fb_theta: impl Fn(f64, f64) -> f64
 ) {
   if !fs::metadata(pngdir).is_ok() {
     if let Err(err) = fs::create_dir_all(pngdir) {
@@ -84,8 +84,8 @@ fn genclosures(
   for i in 1..frames+1 {
     for x in 0..width {
       for y in 0..height {
-        let xfloat = x as f32;
-        let yfloat = y as f32;
+        let xfloat = x as f64;
+        let yfloat = y as f64;
         pngframe.put_pixel(
           x, y,
           Rgba(
@@ -172,18 +172,18 @@ fn genstrings(
 
 */fn main() {
   genclosures(
-    &String::from("src/png_out/test0"), // pngdir
-    &String::from("test0"), // pngname
-    &String::from("src/vid_out/test0"), // vidnmame
+    &String::from("src/png_out/test1.2"), // pngdir
+    &String::from("test1.2"), // pngname
+    &String::from("src/vid_out/test1.2"), // vidname
     1000, 1000, // width, height
-    30, // frames
-    1.0, 1.1, // scale, scalefactor
+    280, // frames
+    1.42, 1.125, // scale, scalefactor
     |x, y| (x-y) as f64, // f_r()
     |x, y| (x*y) as f64, // f_g()
     |x, y| (x*x+y*y) as f64, // f_b()
-    |x, y| ((x+y).sin()) as f64, // fr_theta()
-    |x, y| ((x-y).cos()) as f64, // fb_theta()
-    |x, y| ((x*y).tan()) as f64, // fg_theta()
+    |x, y| (((x*y).sin()) * (x*x + y*y)) as f64, // fr_theta()
+    |x, y| (((x*y).cos()) * (x*x - y*y)) as f64, // fb_theta()
+    |x, y| (((x*y).tan()) * (x-y)) as f64, // fg_theta()
   );
   //println!("{}", fneval(&String::from("(((pow(y , 2 + x)) / (1 + x))*sin( y ))"), 2, 10));
   /*genstrings(
