@@ -16,8 +16,12 @@ fn gencleanup(pngdir: &str, pngname: &str, frames: u32) {
     let pngpath = Path::new(&pathstr);
     if pngpath.exists() {
       match fs::remove_file(pngpath) {
-        Ok(_) => println!("gencleanup(): Successfully removed '{}'", pngpath.display()),
-        Err(err) => eprintln!("gencleanup(): Error removing '{}': {}", pngpath.display(), err),
+        Ok(_) => {
+          //println!("gencleanup(): Successfully removed '{}'", pngpath.display())
+        }
+        Err(err) => {
+          eprintln!("gencleanup(): Error removing '{}': {}", pngpath.display(), err)
+        }
       }
     } else {
       println!("\ngencleanup(): '{}' does not exist; nothing to remove", pngpath.display());
@@ -43,7 +47,7 @@ fn genclosures(
       println!("\ngenclosures(): Successfully created '{}'", pngdir);
     }
   } else {
-    println!("genclosures(): '{}' already exists; cleaning directory contents...", pngdir);
+    println!("\ngenclosures(): '{}' already exists; cleaning directory contents...", pngdir);
     if let Err(err) = cleandir(pngdir) {
       eprintln!("genclojures(): Error cleaning '{}': {}", pngdir, err);
     }
@@ -53,15 +57,15 @@ fn genclosures(
   for i in 1..frames+1 {
     for x in 0..width {
       for y in 0..height {
-        let xfloat = x as f64;
-        let yfloat = y as f64;
+        let xf = x as f64;
+        let yf = y as f64;
         pngframe.put_pixel(
           x, y,
           Rgba(
             [
-              ((fr_theta(xfloat,yfloat)*scale*f_r(xfloat,yfloat)) % 256.0) as u8,
-              ((fg_theta(xfloat,yfloat)*scale*f_g(xfloat,yfloat)) % 256.0) as u8,
-              ((fb_theta(xfloat,yfloat)*scale*f_b(xfloat,yfloat)) % 256.0) as u8,
+              ((fr_theta(xf,yf)*scale*f_r(xf,yf)) % 256.0) as u8,
+              ((fg_theta(xf,yf)*scale*f_g(xf,yf)) % 256.0) as u8,
+              ((fb_theta(xf,yf)*scale*f_b(xf,yf)) % 256.0) as u8,
               255,
             ],
           ),
@@ -73,19 +77,19 @@ fn genclosures(
     scale *= scalefactor
   }
   println!("\ngenclosures(): Successfully generated .png frames for .mp4");
-  let _cmdffmpeg = if cfg!(target_os = "windows") {
+  let _cmdffmpegc = if cfg!(target_os = "windows") {
     Command::new("cmd")
       .args(["/C", &format!("ffmpeg -y -framerate 30 -i {}/{}_%d.png -c:v libx264 -pix_fmt yuv420p {}.mp4", pngdir, pngname, vidname)])
       .output()
-      .expect("genclosures(): Failed to execute ffmpeg command")
+      .expect("genclosures(): Failed to execute _cmdffmpegc")
   } else {
     Command::new("sh")
       .arg("-c")
       .arg("echo hello")
       .output()
-      .expect("genclosures(): Failed to execute ffmpeg command")
+      .expect("genclosures(): Failed to execute _cmdffmpegc")
   };
-  println!("\ngenclosures(): Successfully executed ffmpeg command to generate {}.mp4", vidname);
+  println!("\ngenclosures(): Successfully executed _cmdffmpegc to generate {}.mp4", vidname);
   gencleanup(pngdir, pngname, frames);
   println!("\ngenclosures(): Successfully cleaned up extra frames in '{}'", pngdir);
 }
@@ -110,9 +114,9 @@ fn genoverlay(
       println!("\ngenoverlay(): Successfully created '{}'", framesdir);
     }
   } else {
-    println!("genoverlay(): '{}' already exists; cleaning directory contents...", framesdir);
+    println!("\ngenoverlay(): '{}' already exists; cleaning directory contents...", framesdir);
     if let Err(err) = cleandir(framesdir) {
-      eprintln!("genclojures(): Error cleaning '{}': {}", framesdir, err);
+      eprintln!("genoverlay(): Error cleaning '{}': {}", framesdir, err);
     }
     println!("\ngenoverlay(): Successfully cleaned '{}'", framesdir);
   }
@@ -120,12 +124,12 @@ fn genoverlay(
   for i in 1..frames+1 {
     for x in 0..pngsrc.width() {
       for y in 0..pngsrc.height() {
-        let pxlsrc: Rgba<u8> = *pngsrc.get_pixel(x, y);
-        let xfloat = x as f64;
-        let yfloat = y as f64;
-        let r: f64 = (ifactor*(pxlsrc[0] as f64) + (1.0-ifactor)*(fr_theta(xfloat,yfloat)*scale*f_r(xfloat,yfloat))) % 256.0;
-        let g: f64 = (ifactor*(pxlsrc[1] as f64) + (1.0-ifactor)*(fg_theta(xfloat,yfloat)*scale*f_g(xfloat,yfloat))) % 256.0;
-        let b: f64 = (ifactor*(pxlsrc[2] as f64) + (1.0-ifactor)*(fb_theta(xfloat,yfloat)*scale*f_b(xfloat,yfloat))) % 256.0;
+        let pxlsrc: Rgba<u8> = image::Rgba(pngsrc.get_pixel(x, y).0);
+        let xf = x as f64;
+        let yf = y as f64;
+        let r: f64 = (ifactor*(pxlsrc[0] as f64) + (1.0-ifactor)*(fr_theta(xf,yf)*scale*f_r(xf,yf))) % 256.0;
+        let g: f64 = (ifactor*(pxlsrc[1] as f64) + (1.0-ifactor)*(fg_theta(xf,yf)*scale*f_g(xf,yf))) % 256.0;
+        let b: f64 = (ifactor*(pxlsrc[2] as f64) + (1.0-ifactor)*(fb_theta(xf,yf)*scale*f_b(xf,yf))) % 256.0;
         pngframe.put_pixel(x, y, Rgba([r as u8, g as u8, b as u8, 255]));
       }
     }
@@ -134,43 +138,138 @@ fn genoverlay(
     scale *= scalefactor;
   }
   println!("\ngenoverlay(): Successfully generated .png frames for .mp4");
-  let _cmdffmpeg = if cfg!(target_os = "windows") {
+  let _cmdffmpego = if cfg!(target_os = "windows") {
     Command::new("cmd")
       .args(["/C", &format!("ffmpeg -y -framerate 30 -i {}/{}_%d.png -c:v libx264 -pix_fmt yuv420p {}.mp4", framesdir, framename, vidname)])
       .output()
-      .expect("genoverlay(): Failed to execute ffmpeg command")
+      .expect("genoverlay(): Failed to execute _cmdffmpego")
   } else {
     Command::new("sh")
       .arg("-c")
       .arg("echo hello")
       .output()
-      .expect("genoverlay(): Failed to execute ffmpeg command")
+      .expect("genoverlay(): Failed to execute _cmdffmpego")
   };
-  println!("\ngenoverlay(): Successfully executed ffmpeg command to generate {}.mp4", vidname);
+  println!("\ngenoverlay(): Successfully executed _cmdffmpego to generate {}.mp4", vidname);
   gencleanup(framesdir, framename, frames);
   println!("\ngenoverlay(): Successfully cleaned up extra frames in '{}'", framesdir);
 }
 
+fn vfxoverlay(
+  vidname: &str, framesdir: &str, outname: &str,
+  ifactor: f64, mut scale: f64, scalefactor: f64,
+  f_r: impl Fn(f64, f64) -> f64,
+  f_g: impl Fn(f64, f64) -> f64,
+  f_b: impl Fn(f64, f64) -> f64,
+  fr_theta: impl Fn(f64, f64) -> f64,
+  fg_theta: impl Fn(f64, f64) -> f64,
+  fb_theta: impl Fn(f64, f64) -> f64
+) {
+  if !fs::metadata(vidname).is_ok() {
+    eprintln!("vfxoverlay(): Could not locate '{}'", vidname);
+  }
+  if !fs::metadata(framesdir).is_ok() {
+    if let Err(err) = fs::create_dir_all(framesdir) {
+      eprintln!("vfxoverlay(): Error creating directory '{}': {}", framesdir, err);
+    } else {
+      println!("\ngenoverlay(): Successfully created '{}'", framesdir);
+    }
+  } else {
+    println!("\nvfxoverlay(): '{}' already exists; cleaning directory contents...", framesdir);
+    if let Err(err) = cleandir(framesdir) {
+      eprintln!("vfxoverlay(): Error cleaning '{}': {}", framesdir, err);
+    }
+    println!("\nvfxoverlay(): Successfully cleaned '{}'", framesdir);
+  }
+  let parts: Vec<&str> = outname.split("/").collect();
+  let shortoutname = parts[2];
+  let _cmdteardown = if cfg!(target_os = "windows") {
+    Command::new("cmd")
+      .args(["/C", &format!("ffmpeg -i {} -vf fps=30 {}/{}_%03d.png", vidname, framesdir, shortoutname)])
+      .output()
+      .expect("vfxoverlay(): Failed to execute _cmdteardown")
+  } else {
+    Command::new("sh")
+      .arg("-c")
+      .arg("echo hello")
+      .output()
+      .expect("vfxoverlay(): Failed to execute _cmdteardown")
+  };
+  println!("\nvfxoverlay(): Successfully executed _cmdteardown to teardown '{}' into frames", vidname);
+  let framefiles: Vec<String> = match fs::read_dir(framesdir) {
+    Ok(files) => {
+      let fnames: Vec<String> = files.filter_map(|entry| {
+        entry.ok().and_then(|e| e.file_name().into_string().ok())
+      }).collect();
+      fnames
+    }
+    Err(err) => {
+      eprintln!("vfxoverlay(): Error reading output frames in '{}': {}", framesdir, err);
+      Vec::new()
+    }
+  };
+  for framename in framefiles {
+    let fxname = framename.replace("_", "_fx_");
+    let pngimg = image::open(&format!("{}/{}", framesdir, framename)).expect(&format!("vfxoverlay(): could not find source image '{}/{}' to use in overlay generation", framesdir, framename));
+    let pngsrc: RgbaImage = pngimg.into_rgba8();
+    let mut pngframe: RgbaImage = RgbaImage::new(pngsrc.width(), pngsrc.height());
+    for x in 0..pngsrc.width() {
+      for y in 0..pngsrc.height() {
+        let pxlsrc: Rgba<u8> = image::Rgba(pngsrc.get_pixel(x, y).0);
+        let xf = x as f64;
+        let yf = y as f64;
+        let r: f64 = (ifactor*(pxlsrc[0] as f64) + (1.0-ifactor)*(fr_theta(xf,yf)*scale*f_r(xf,yf))) % 256.0;
+        let g: f64 = (ifactor*(pxlsrc[1] as f64) + (1.0-ifactor)*(fg_theta(xf,yf)*scale*f_g(xf,yf))) % 256.0;
+        let b: f64 = (ifactor*(pxlsrc[2] as f64) + (1.0-ifactor)*(fb_theta(xf,yf)*scale*f_b(xf,yf))) % 256.0;
+        pngframe.put_pixel(x, y, Rgba([r as u8, g as u8, b as u8, 255]));
+      }
+    }
+    pngframe.save(format!("{}/{}", framesdir, fxname)).unwrap();
+    pngframe.save(format!("{}/{}", framesdir, fxname)).unwrap();
+    match fs::remove_file(&format!("{}/{}", framesdir, framename)) {
+      Ok(_) => {}
+      Err(err) => {
+        eprintln!("vfxoverlay(): Error removing frame '{}/{}': {}", framesdir, framename, err)
+      }
+    }
+    scale *= scalefactor;
+  }
+  // use ffmpeg to create a new .mp4 with the effected frames
+  let _cmdrebuild = if cfg!(target_os = "windows") {
+    Command::new("cmd")
+      .args(["/C", &format!("ffmpeg -y -framerate 30 -i {}/{}_fx_%03d.png -c:v libx264 -pix_fmt yuv420p {}.mp4", framesdir, shortoutname, outname)])
+      .output()
+      .expect("vfxoverlay(): Failed to execute _cmdrebuild")
+  } else {
+    Command::new("sh")
+      .arg("-c")
+      .arg("echo hello")
+      .output()
+      .expect("vfxoverlay(): Failed to execute _cmdrebuild")
+  };
+  println!("\nvfxoverlay(): Successfully executed _cmdrebuild to generate {}.mp4", outname);
+}
+
 fn main() {
   genclosures(
-    &String::from("src/png_out/test2.0"), // pngdir
-    &String::from("test2.0"), // pngname
-    &String::from("src/vid_out/test2.0"), // vidname
+    &String::from("src/png_out/test2.1"), // pngdir
+    &String::from("test2.1"), // pngname
+    &String::from("src/vid_out/test2.1"), // vidname
     1000, 1000, // width, height
     30, // frames
     1.42, 1.125, // scale, scalefactor
     |x, y| (x-y) as f64, // f_r()
     |x, y| (x*y) as f64, // f_g()
     |x, y| (x*x+y*y) as f64, // f_b()
-    |x, y| (((x*y).sin()) * (x*x + y*y)) as f64, // fr_theta()
+    |x, y| ((x*y) * (x*x + y*y)) as f64, // fr_theta()
     |x, y| (((x*y).cos()) * (x*x - y*y)) as f64, // fg_theta()
-    |x, y| (((x*y).tan()) * (x-y)) as f64, // fb_theta()
+    |x, y| ((x*y) * (x-y)) as f64, // fb_theta()
   );
   genoverlay(
     &String::from("src/png_in/test2.0_7"), // pngname
-    &String::from("src/png_out/test3.0"), // framesdir
-    &String::from("test3.0"), // framename
-    &String::from("src/vid_out/test3.0"), // vidname
+    &String::from("src/png_out/test3.1"), // framesdir
+    &String::from("test3.1"), // framename
+    &String::from("src/vid_out/test3.1"), // vidname
     30, // frames
     0.5, 1.42, 1.125, // ifactor, scale, scalefactor
     |x, y| (((x*y).sin()) * (x*x + y*y)) as f64, // f_r()
@@ -180,4 +279,16 @@ fn main() {
     |x, y| (x*y) as f64, // fg_theta()
     |x, y| (x*x+y*y) as f64, // fb_theta()
   );
+  vfxoverlay(
+    &String::from("src/vid_in/odometer.mp4"), // vidname
+    &String::from("src/png_out/test4.0"), // framesdir
+    &String::from("src/vid_out/test4.0"), // outname
+    0.99, 1.42, 1.125, // ifactor, scale, scalefactor
+    |x, y| (x*x + y*y) as f64, // f_r()
+    |x, y| (x*x - y*y) as f64, // f_g()
+    |x, y| (x-y) as f64, // f_b()
+    |x, y| (x-y) as f64, // fr_theta()
+    |x, y| (x*y) as f64, // fg_theta()
+    |x, y| (x*x+y*y) as f64, // fb_theta()
+  )
 }
