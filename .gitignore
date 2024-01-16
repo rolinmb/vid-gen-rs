@@ -1,5 +1,6 @@
-src/png_out
 src/png_in
+src/png_out
+src/vid_in
 src/vid_out
 src/main.exe
 src/parse.exe
