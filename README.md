@@ -14,4 +14,4 @@ parser.go:
 - evaluateASTNode uses go standard libraries to take the result of parsing a string with go/parser (interface{} type object) and two variables x,y ; then outputs the result
 
 TODO:
-- decompose .mp4 video into frames and then process with FX and rebuild like in vid-gen-go
+- troubleshoot interpolations not working as expected

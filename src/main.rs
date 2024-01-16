@@ -251,7 +251,7 @@ fn vfxoverlay(
 }
 
 fn main() {
-  genclosures(
+  /*genclosures(
     &String::from("src/png_out/test2.1"), // pngdir
     &String::from("test2.1"), // pngname
     &String::from("src/vid_out/test2.1"), // vidname
@@ -279,11 +279,11 @@ fn main() {
     |x, y| (x*y) as f64, // fg_theta()
     |x, y| (x*x+y*y) as f64, // fb_theta()
   );
-  vfxoverlay(
+  */vfxoverlay(
     &String::from("src/vid_in/odometer.mp4"), // vidname
     &String::from("src/png_out/test4.0"), // framesdir
     &String::from("src/vid_out/test4.0"), // outname
-    0.99, 1.42, 1.125, // ifactor, scale, scalefactor
+    0.5, 1.42, 1.05, // ifactor, scale, scalefactor
     |x, y| (x*x + y*y) as f64, // f_r()
     |x, y| (x*x - y*y) as f64, // f_g()
     |x, y| (x-y) as f64, // f_b()
