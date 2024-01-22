@@ -1,7 +1,26 @@
 use std::fs;
 use std::path::Path;
 use std::process::Command;
-use image::{Rgba, RgbaImage};
+use image::{GrayImage, Rgba, RgbaImage, imageops};
+
+const SOBELHORIZ: [f32; 9] = [-1.0, 0.0, 1.0, -2.0, 0.0, 2.0, -1.0, 0.0, 1.0];
+const SOBELVERTI: [f32; 9] = [-1.0, -2.0, -1.0, 0.0, 0.0, 0.0, 1.0, 2.0, 1.0];
+
+fn pngedges(srcpng: image::ImageBuffer<image::Rgba<u8>, Vec<u8>>) -> RgbaImage {
+  let graypng = GrayImage::from_raw(srcpng.width(), srcpng.height(), srcpng.clone().into_raw()).unwrap();
+  let gradx = imageops::filter3x3(&graypng, &SOBELHORIZ);
+  let grady = imageops::filter3x3(&graypng, &SOBELVERTI);
+  let mut edges = RgbaImage::new(srcpng.width(), srcpng.height());
+  for x in 0..srcpng.width() {
+    for y in 0..srcpng.height() {
+      let magx = gradx.get_pixel(x, y)[0] as f32;
+      let magy = grady.get_pixel(x, y)[0] as f32;
+      let mag = (magx.powi(2) + magy.powi(2)).sqrt() as u8;
+      edges.put_pixel(x, y, Rgba([mag, mag, mag, 255]));
+    }
+  }
+  edges
+}
 
 fn cleandir(dir: &str) -> std::io::Result<()> {
   fs::remove_dir_all(dir)?;
@@ -32,7 +51,7 @@ fn gencleanup(pngdir: &str, pngname: &str, frames: u32) {
 fn genclosures(
   pngdir: &str, pngname: &str, vidname: &str,
   width: u32, height: u32, frames: u32,
-  mut scale: f64, scalefactor: f64,
+  mut scale: f64, scale_mult: f64,
   f_r: impl Fn(f64, f64) -> f64,
   f_g: impl Fn(f64, f64) -> f64,
   f_b: impl Fn(f64, f64) -> f64,
@@ -59,22 +78,15 @@ fn genclosures(
       for y in 0..height {
         let xf = x as f64;
         let yf = y as f64;
-        pngframe.put_pixel(
-          x, y,
-          Rgba(
-            [
-              ((fr_theta(xf,yf)*scale*f_r(xf,yf)) % 256.0) as u8,
-              ((fg_theta(xf,yf)*scale*f_g(xf,yf)) % 256.0) as u8,
-              ((fb_theta(xf,yf)*scale*f_b(xf,yf)) % 256.0) as u8,
-              255,
-            ],
-          ),
-        );
+        let r: f64 = (fr_theta(xf,yf) * scale * f_r(xf,yf)) % 255.0;
+        let g: f64 = (fg_theta(xf,yf) * scale * f_g(xf,yf)) % 255.0;
+        let b: f64 = (fb_theta(xf,yf) * scale * f_b(xf,yf)) % 255.0;
+        pngframe.put_pixel(x, y, Rgba([r as u8, g as u8, b as u8, 255]));
       }
     }
     pngframe.save(format!("{}/{}_{}.png", pngdir, pngname, i-1 )).unwrap();
     pngframe.save(format!("{}/{}_{}.png", pngdir, pngname, (((frames*2)-1)-(i-1)) )).unwrap();
-    scale *= scalefactor
+    scale *= scale_mult
   }
   println!("\ngenclosures(): Successfully generated .png frames for .mp4");
   let _cmdffmpegc = if cfg!(target_os = "windows") {
@@ -97,16 +109,23 @@ fn genclosures(
 fn genoverlay(
   pngname: &str, framesdir: &str, framename: &str, vidname: &str,
   frames: u32,
-  ifactor: f64, mut scale: f64, scalefactor: f64,
+  mut ifactor: f64,
+  ifactor_adj: f64,
+  mut scale: f64,
+  scale_mult: f64,
   f_r: impl Fn(f64, f64) -> f64,
   f_g: impl Fn(f64, f64) -> f64,
   f_b: impl Fn(f64, f64) -> f64,
   fr_theta: impl Fn(f64, f64) -> f64,
   fg_theta: impl Fn(f64, f64) -> f64,
-  fb_theta: impl Fn(f64, f64) -> f64
+  fb_theta: impl Fn(f64, f64) -> f64,
+  edge_detect: bool
 ) {
   let pngimg = image::open(pngname.to_owned()+".png").expect(&format!("genoverlay(): could not find source image '{}.png' to use in overlay generation", pngname));
-  let pngsrc: RgbaImage = pngimg.into_rgba8();
+  let mut pngsrc: RgbaImage = pngimg.into_rgba8();
+  if edge_detect {
+    pngsrc = pngedges(pngsrc);
+  }
   if !fs::metadata(framesdir).is_ok() {
     if let Err(err) = fs::create_dir_all(framesdir) {
       eprintln!("genoverlay(): Error creating directory '{}': {}", framesdir, err);
@@ -120,6 +139,7 @@ fn genoverlay(
     }
     println!("\ngenoverlay(): Successfully cleaned '{}'", framesdir);
   }
+  let if_adj: f64 = ifactor_adj / (frames as f64);
   let mut pngframe = RgbaImage::new(pngsrc.width(), pngsrc.height());
   for i in 1..frames+1 {
     for x in 0..pngsrc.width() {
@@ -127,15 +147,17 @@ fn genoverlay(
         let pxlsrc: Rgba<u8> = image::Rgba(pngsrc.get_pixel(x, y).0);
         let xf = x as f64;
         let yf = y as f64;
-        let r: f64 = (ifactor*(pxlsrc[0] as f64) + (1.0-ifactor)*(fr_theta(xf,yf)*scale*f_r(xf,yf))) % 256.0;
-        let g: f64 = (ifactor*(pxlsrc[1] as f64) + (1.0-ifactor)*(fg_theta(xf,yf)*scale*f_g(xf,yf))) % 256.0;
-        let b: f64 = (ifactor*(pxlsrc[2] as f64) + (1.0-ifactor)*(fb_theta(xf,yf)*scale*f_b(xf,yf))) % 256.0;
+        let r: f64 = (ifactor * (pxlsrc[0] as f64) + (1.0 - ifactor) * (fr_theta(xf,yf) * scale * f_r(xf,yf))) % 255.0;
+        let g: f64 = (ifactor * (pxlsrc[1] as f64) + (1.0 - ifactor) * (fg_theta(xf,yf) * scale * f_g(xf,yf))) % 255.0;
+        let b: f64 = (ifactor * (pxlsrc[2] as f64) + (1.0 - ifactor) * (fb_theta(xf,yf) * scale * f_b(xf,yf))) % 255.0;
         pngframe.put_pixel(x, y, Rgba([r as u8, g as u8, b as u8, 255]));
       }
     }
     pngframe.save(format!("{}/{}_{}.png", framesdir, framename, i-1 )).unwrap();
     pngframe.save(format!("{}/{}_{}.png", framesdir, framename, (((frames*2)-1)-(i-1)) )).unwrap();
-    scale *= scalefactor;
+    scale *= scale_mult;
+    ifactor += if_adj;
+    ifactor %= 1.0;
   }
   println!("\ngenoverlay(): Successfully generated .png frames for .mp4");
   let _cmdffmpego = if cfg!(target_os = "windows") {
@@ -157,13 +179,17 @@ fn genoverlay(
 
 fn vfxoverlay(
   vidname: &str, framesdir: &str, outname: &str,
-  ifactor: f64, mut scale: f64, scalefactor: f64,
+  mut ifactor: f64,
+  ifactor_adj: f64,
+  mut scale: f64,
+  scale_adj: f64,
   f_r: impl Fn(f64, f64) -> f64,
   f_g: impl Fn(f64, f64) -> f64,
   f_b: impl Fn(f64, f64) -> f64,
   fr_theta: impl Fn(f64, f64) -> f64,
   fg_theta: impl Fn(f64, f64) -> f64,
-  fb_theta: impl Fn(f64, f64) -> f64
+  fb_theta: impl Fn(f64, f64) -> f64,
+  edge_detect: bool
 ) {
   if !fs::metadata(vidname).is_ok() {
     eprintln!("vfxoverlay(): Could not locate '{}'", vidname);
@@ -208,33 +234,37 @@ fn vfxoverlay(
       Vec::new()
     }
   };
+  let if_adj: f64 = ifactor_adj / (framefiles.len() as f64);
   for framename in framefiles {
     let fxname = framename.replace("_", "_fx_");
     let pngimg = image::open(&format!("{}/{}", framesdir, framename)).expect(&format!("vfxoverlay(): could not find source image '{}/{}' to use in overlay generation", framesdir, framename));
-    let pngsrc: RgbaImage = pngimg.into_rgba8();
+    let mut pngsrc: RgbaImage = pngimg.into_rgba8();
+    if edge_detect {
+      pngsrc = pngedges(pngsrc)
+    }
     let mut pngframe: RgbaImage = RgbaImage::new(pngsrc.width(), pngsrc.height());
     for x in 0..pngsrc.width() {
       for y in 0..pngsrc.height() {
         let pxlsrc: Rgba<u8> = image::Rgba(pngsrc.get_pixel(x, y).0);
         let xf = x as f64;
         let yf = y as f64;
-        let r: f64 = (ifactor*(pxlsrc[0] as f64) + (1.0-ifactor)*(fr_theta(xf,yf)*scale*f_r(xf,yf))) % 256.0;
-        let g: f64 = (ifactor*(pxlsrc[1] as f64) + (1.0-ifactor)*(fg_theta(xf,yf)*scale*f_g(xf,yf))) % 256.0;
-        let b: f64 = (ifactor*(pxlsrc[2] as f64) + (1.0-ifactor)*(fb_theta(xf,yf)*scale*f_b(xf,yf))) % 256.0;
+        let r: f64 = ((ifactor * (pxlsrc[0] as f64)) + ((1.0 - ifactor) * (fr_theta(xf,yf) * scale * f_r(xf,yf)))) % 255.0;
+        let g: f64 = ((ifactor * (pxlsrc[1] as f64)) + ((1.0 - ifactor) * (fg_theta(xf,yf) * scale * f_g(xf,yf)))) % 255.0;
+        let b: f64 = ((ifactor * (pxlsrc[2] as f64)) + ((1.0 - ifactor) * (fb_theta(xf,yf) * scale * f_b(xf,yf)))) % 255.0;
         pngframe.put_pixel(x, y, Rgba([r as u8, g as u8, b as u8, 255]));
       }
     }
     pngframe.save(format!("{}/{}", framesdir, fxname)).unwrap();
-    pngframe.save(format!("{}/{}", framesdir, fxname)).unwrap();
-    match fs::remove_file(&format!("{}/{}", framesdir, framename)) {
+    match fs::remove_file(&format!("{}/{}", framesdir, framename)) { // cleanup unaffected frames to save space while building
       Ok(_) => {}
       Err(err) => {
         eprintln!("vfxoverlay(): Error removing frame '{}/{}': {}", framesdir, framename, err)
       }
     }
-    scale *= scalefactor;
+    scale *= scale_adj;
+    ifactor += if_adj;
+    ifactor %= 1.0;
   }
-  // use ffmpeg to create a new .mp4 with the effected frames
   let _cmdrebuild = if cfg!(target_os = "windows") {
     Command::new("cmd")
       .args(["/C", &format!("ffmpeg -y -framerate 30 -i {}/{}_fx_%03d.png -c:v libx264 -pix_fmt yuv420p {}.mp4", framesdir, shortoutname, outname)])
@@ -257,7 +287,7 @@ fn main() {
     &String::from("src/vid_out/test2.1"), // vidname
     1000, 1000, // width, height
     30, // frames
-    1.42, 1.125, // scale, scalefactor
+    1.42, 1.125, // scale, scale_mult
     |x, y| (x-y) as f64, // f_r()
     |x, y| (x*y) as f64, // f_g()
     |x, y| (x*x+y*y) as f64, // f_b()
@@ -271,24 +301,32 @@ fn main() {
     &String::from("test3.1"), // framename
     &String::from("src/vid_out/test3.1"), // vidname
     30, // frames
-    0.5, 1.42, 1.125, // ifactor, scale, scalefactor
+    0.5, // ifactor
+    0.0 // ifactor_adj
+    1.42, // scale
+    1.125, // scale_mult
     |x, y| (((x*y).sin()) * (x*x + y*y)) as f64, // f_r()
     |x, y| (((x*y).cos()) * (x*x - y*y)) as f64, // f_g()
     |x, y| (((x*y).tan()) * (x-y)) as f64, // f_b()
     |x, y| (x-y) as f64, // fr_theta()
     |x, y| (x*y) as f64, // fg_theta()
     |x, y| (x*x+y*y) as f64, // fb_theta()
+    false // edge_detect
   );
   */vfxoverlay(
-    &String::from("src/vid_in/odometer.mp4"), // vidname
-    &String::from("src/png_out/test4.0"), // framesdir
-    &String::from("src/vid_out/test4.0"), // outname
-    0.5, 1.42, 1.05, // ifactor, scale, scalefactor
-    |x, y| (x*x + y*y) as f64, // f_r()
-    |x, y| (x*x - y*y) as f64, // f_g()
-    |x, y| (x-y) as f64, // f_b()
-    |x, y| (x-y) as f64, // fr_theta()
-    |x, y| (x*y) as f64, // fg_theta()
-    |x, y| (x*x+y*y) as f64, // fb_theta()
-  )
+    &String::from("src/vid_in/stairs.mp4"), // vidname
+    &String::from("src/png_out/stairs.2"), // framesdir
+    &String::from("src/vid_out/stairs.2"), // outname
+    0.925, // ifactor
+    0.074, // ifactor_adj
+    1.0, // scale,
+    1.0, // scale_mult
+    |x, y| ((x*x*y) + (x*y*y)) as f64, // f_r()
+    |x, y| ((x + y) * (x - y)).abs() as f64, // f_g()
+    |x, y| (x + y) as f64, // f_b()
+    |x, y| ((x / (y + 1.0)) + (y / (x + 1.0))) as f64, // fr_theta()
+    |x, y| ((x / (y + 1.0)) - (y / (x + 1.0))).abs() as f64, // fg_theta()
+    |x, y| ((x / (y + 1.0)) * (y / (x + 1.0))) as f64, // fb_theta()
+    false  // edge_detect
+  );
 }
