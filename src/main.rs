@@ -198,7 +198,7 @@ fn vfxoverlay(
     if let Err(err) = fs::create_dir_all(framesdir) {
       eprintln!("vfxoverlay(): Error creating directory '{}': {}", framesdir, err);
     } else {
-      println!("\ngenoverlay(): Successfully created '{}'", framesdir);
+      println!("\nvfxoverlay(): Successfully created '{}'", framesdir);
     }
   } else {
     println!("\nvfxoverlay(): '{}' already exists; cleaning directory contents...", framesdir);
@@ -235,6 +235,7 @@ fn vfxoverlay(
     }
   };
   let if_adj: f64 = ifactor_adj / (framefiles.len() as f64);
+  let ifinit = ifactor;
   for framename in framefiles {
     let fxname = framename.replace("_", "_fx_");
     let pngimg = image::open(&format!("{}/{}", framesdir, framename)).expect(&format!("vfxoverlay(): could not find source image '{}/{}' to use in overlay generation", framesdir, framename));
@@ -255,15 +256,19 @@ fn vfxoverlay(
       }
     }
     pngframe.save(format!("{}/{}", framesdir, fxname)).unwrap();
-    match fs::remove_file(&format!("{}/{}", framesdir, framename)) { // cleanup unaffected frames to save space while building
+    match fs::remove_file(&format!("{}/{}", framesdir, framename)) {
       Ok(_) => {}
       Err(err) => {
         eprintln!("vfxoverlay(): Error removing frame '{}/{}': {}", framesdir, framename, err)
       }
     }
-    scale *= scale_adj;
     ifactor += if_adj;
-    ifactor %= 1.0;
+    if ifactor < 0.0 {
+      ifactor = 0.0;
+    } else if ifactor > (ifinit + ifactor_adj) {
+      ifactor = ifinit + ifactor_adj;
+    }
+    scale *= scale_adj;
   }
   let _cmdrebuild = if cfg!(target_os = "windows") {
     Command::new("cmd")
@@ -314,11 +319,11 @@ fn main() {
     false // edge_detect
   );
   */vfxoverlay(
-    &String::from("src/vid_in/stairs.mp4"), // vidname
-    &String::from("src/png_out/stairs.2"), // framesdir
-    &String::from("src/vid_out/stairs.2"), // outname
-    0.925, // ifactor
-    0.074, // ifactor_adj
+    &String::from("src/vid_in/driving_fog.mp4"), // vidname
+    &String::from("src/png_out/driving_fog.0"), // framesdir
+    &String::from("src/vid_out/driving_fog.0"), // outname
+    0.995, // ifactor
+    -0.294, // ifactor_adj
     1.0, // scale,
     1.0, // scale_mult
     |x, y| ((x*x*y) + (x*y*y)) as f64, // f_r()
